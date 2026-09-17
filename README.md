@@ -8,3 +8,5 @@ Shift Baru : B <br>
 <img width="1080" height="2424" alt="Screenshot_20260831_131125" src="https://github.com/user-attachments/assets/3386ee64-5ad7-4213-91f9-7653d4f483dc" /> <br>
 # Modul 2 <br>
 <img width="1080" height="2424" alt="Screen_recording_20260907_165652" src="https://github.com/user-attachments/assets/2821cc71-0d15-4ae2-a97a-4356181ac8fa" />
+# Modul 3 <br>
+<img width="544" height="1216" alt="Screen_recording_20260917_145346" src="https://github.com/user-attachments/assets/151ef390-cdcf-4b2d-9d8f-178bece79e86" />

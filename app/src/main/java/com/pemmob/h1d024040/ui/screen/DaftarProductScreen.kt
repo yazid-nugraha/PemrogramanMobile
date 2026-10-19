@@ -1,7 +1,5 @@
 package com.pemmob.h1d024040.ui.screen
 
-import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,57 +17,76 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.pemmob.h1d024040.R
-import com.pemmob.h1d024040.data.dummy.DummyData
 import com.pemmob.h1d024040.data.model.Category
 import com.pemmob.h1d024040.data.model.Product
-import kotlinx.coroutines.delay
+import com.pemmob.h1d024040.ui.viewmodel.ProductUiState
+import com.pemmob.h1d024040.ui.viewmodel.ProductViewModel
+import com.pemmob.h1d024040.util.JualanConstants.BASE_URL
 
 @Composable
-fun DaftarProdukScreen(navController: NavController? = null) {
-    var selectedCategoryId by rememberSaveable { mutableStateOf(DummyData.categories.firstOrNull()?.id) }
+fun DaftarProdukScreen(
+    navController: NavController? = null,
+    viewModel: ProductViewModel
+) {
+    var selectedCategoryId by rememberSaveable { mutableStateOf<Int?>(null) }
+    val uiState by viewModel.uiState.collectAsState()
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var filteredProducts by remember { mutableStateOf(emptyList<Product>()) }
 
-    LaunchedEffect(key1 = selectedCategoryId, key2 = searchQuery) {
-        isLoading = true
-        delay(1000) // Simulasi loading server lambat
-
-        val filteredByCategory = if (selectedCategoryId != null) {
-            DummyData.products.filter { it.category_id == selectedCategoryId }
-        } else DummyData.products
-
-        filteredProducts = if (searchQuery.isBlank()) {
-            filteredByCategory
-        } else {
-            filteredByCategory.filter { it.name.contains(other = searchQuery, ignoreCase = true) }
+    when (val state = uiState) {
+        is ProductUiState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         }
-        isLoading = false
+        is ProductUiState.Error -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+            }
+        }
+        is ProductUiState.Success -> {
+            if (selectedCategoryId == null && state.categories.isNotEmpty()) {
+                selectedCategoryId = state.categories.first().id
+            }
+
+            val filteredByCategory = if (selectedCategoryId != null) {
+                state.products.filter { it.category_id == selectedCategoryId }
+            } else {
+                state.products
+            }
+
+            val filteredProducts = if (searchQuery.isBlank()) {
+                filteredByCategory
+            } else {
+                filteredByCategory.filter {
+                    it.name.contains(other = searchQuery, ignoreCase = true)
+                }
+            }
+
+            StatelessDaftarProduct(
+                categories = state.categories,
+                selectedCategoryId = selectedCategoryId,
+                onCategorySelected = { selectedCategoryId = it },
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                isLoading = false,
+                products = filteredProducts,
+                onProductClick = { product ->
+                    navController?.navigate(route = "detail/${product.id}")
+                },
+                onContactUsClick = {
+                    navController?.navigate(route = "hubungi_kami")
+                }
+            )
+        }
     }
-
-    StatelessDaftarProduct(
-        categories = DummyData.categories,
-        selectedCategoryId = selectedCategoryId,
-        onCategorySelected = { selectedCategoryId = it },
-        searchQuery = searchQuery,
-        onSearchQueryChange = { searchQuery = it },
-        isLoading = isLoading,
-        products = filteredProducts,
-        onProductClick = { product ->
-            navController?.navigate(route = "detail/${product.id}")
-        },
-        onContactUsClick = {
-            navController?.navigate(route = "hubungi_kami")
-        }
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,8 +102,6 @@ fun StatelessDaftarProduct(
     onProductClick: (Product) -> Unit,
     onContactUsClick: () -> Unit
 ) {
-    val context = LocalContext.current
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -116,6 +131,7 @@ fun StatelessDaftarProduct(
                             modifier = Modifier.size(24.dp)
                         )
                     }
+
                     DropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
@@ -196,23 +212,21 @@ fun StatelessDaftarProduct(
                         Text("Mencari data...")
                     }
                 }
+            } else if (products.isEmpty()) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("Produk tidak ditemukan.")
+                }
             } else {
-                if (products.isEmpty()) {
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("Produk tidak ditemukan.")
-                    }
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(count = 2),
-                        contentPadding = PaddingValues(all = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.weight(1f) // Menggunakan weight(1f) agar bisa di-scroll
-                    ) {
-                        items(products) { product ->
-                            ProductItemCard(product = product) {
-                                onProductClick(product)
-                            }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(count = 2),
+                    contentPadding = PaddingValues(all = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.weight(1f) // Menggunakan weight(1f) agar bisa di-scroll
+                ) {
+                    items(products) { product ->
+                        ProductItemCard(product = product) {
+                            onProductClick(product)
                         }
                     }
                 }
@@ -221,14 +235,8 @@ fun StatelessDaftarProduct(
     }
 }
 
-// =======================================================
-// KODE DI BAWAH INI ADALAH KODE ASLI MILIKMU TANPA UBAHAN
-// =======================================================
-
 @Composable
 fun ProductItemCard(product: Product, onClick: () -> Unit) {
-    val context = LocalContext.current
-
     Card(
         modifier = Modifier
             .padding(all = 8.dp)
@@ -238,14 +246,17 @@ fun ProductItemCard(product: Product, onClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(all = 12.dp)) {
-            val imageId = context.resources.getIdentifier(product.img, "drawable", context.packageName)
-            val imageRes = if (imageId != 0) imageId else R.drawable.dummy_product
+            val imageModel: Any = if (product.img == "dummy_product") {
+                R.drawable.dummy_product
+            } else {
+                "${BASE_URL}img/${product.img}"
+            }
 
             Box(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Image(
-                    painter = painterResource(id = imageRes),
+                AsyncImage(
+                    model = imageModel,
                     contentDescription = product.name,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -317,6 +328,18 @@ fun CategoryItem(category: Category, isSelected: Boolean, onClick: () -> Unit) {
 @Composable
 fun PreviewProduct() {
     Box(modifier = Modifier.padding(16.dp)) {
-        ProductItemCard(product = DummyData.products[0], onClick = {})
+        ProductItemCard(
+            product = Product(
+                id = 1,
+                category_id = 1,
+                category = Category(id = 1, name = "Makanan", description = "Aneka Makanan Lokal", products_count = 5),
+                name = "Mendoan Purbalingga",
+                description = "Mendoan hangat dan gurih",
+                price = 10000.0,
+                stock = 50,
+                img = "dummy_product"
+            ),
+            onClick = {}
+        )
     }
 }

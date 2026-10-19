@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,6 +14,7 @@ import com.pemmob.h1d024040.ui.screen.DaftarProdukScreen
 import com.pemmob.h1d024040.ui.screen.DetailProductScreen
 import com.pemmob.h1d024040.ui.screen.HubungiKamiScreen
 import com.pemmob.h1d024040.ui.theme.JualanTheme
+import com.pemmob.h1d024040.ui.viewmodel.ProductViewModel
 
 class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,15 +22,19 @@ class HomeActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             JualanTheme {
-                // Inisialisasi pengontrol navigasi
+                // Inisialisasi pengontrol navigasi dan ViewModel bersama
                 val navController = rememberNavController()
+                val productViewModel: ProductViewModel = viewModel()
 
                 // NavHost sebagai wadah yang mengatur perpindahan antar layar
                 NavHost(navController = navController, startDestination = "daftar_produk") {
 
                     // Rute 1: Layar Utama (Daftar Produk)
                     composable(route = "daftar_produk") {
-                        DaftarProdukScreen(navController = navController)
+                        DaftarProdukScreen(
+                            navController = navController,
+                            viewModel = productViewModel
+                        )
                     }
 
                     // Rute 2: Layar Hubungi Kami
@@ -47,10 +53,10 @@ class HomeActivity : ComponentActivity() {
                         val productId = backStackEntry.arguments?.getInt("productId") ?: 0
                         DetailProductScreen(
                             productId = productId,
-                            navController = navController
+                            navController = navController,
+                            viewModel = productViewModel
                         )
                     }
-
                 }
             }
         }
